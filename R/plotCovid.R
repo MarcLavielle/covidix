@@ -1,5 +1,5 @@
 plotCovid <- function(data=d, type=c("confirmed", "deaths"), nc.min=200, nd.min=20,
-                      p.min=0.005, point.size=1, line.size=0.75, log.scale=TRUE, plot=TRUE) {
+                      p.min=0.005, point.size=1, line.size=0.75, log.scale=TRUE, plot=FALSE) {
 
   type.in <- type
   d <- data
@@ -31,7 +31,7 @@ plotCovid <- function(data=d, type=c("confirmed", "deaths"), nc.min=200, nd.min=
   d$type <- droplevels(d$type)
 
   if ("confirmed" %in% levels(d$type))
-    x.lab <- paste0("Number of days after the ", cmin[1], "th confirmed cas  ")
+    x.lab <- paste0("Number of days after the ", cmin[1], "th confirmed case  ")
   if ("death" %in% levels(d$type))
     x.lab <- c(x.lab, paste0(" ;  Number of days after the ", cmin[2], "th death "))
 

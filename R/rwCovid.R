@@ -1,11 +1,11 @@
-writeCovid <- function(file.out="covid19.csv") {
+rwCovid <- function(file.out=NULL) {
   
   # https://github.com/CSSEGISandData/COVID-19/ 
   
   url.confirmed <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
   
   url.deaths <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
- 
+  
   # deprecated:
   # url.recovered <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv"
   
@@ -55,7 +55,6 @@ writeCovid <- function(file.out="covid19.csv") {
     dk <- melt(dk, id=list("country"), variable.name="date")
     dk$country <- droplevels(dk$country)
     
-    
     # ---- reformat the date and add the day
     nk <- sub("X","",dk[['date']])
     dk <- dk %>% 
@@ -64,12 +63,22 @@ writeCovid <- function(file.out="covid19.csv") {
       mutate(day=rep(1:n.day, n.country)) %>% drop_na() %>%
       mutate(type=type) %>%
       select(country, date, day, value, type)
-  
-
-   # dk$type <- type
     
     d <- rbind(d, dk)
   }
   
-  write.csv(d, file=file.out, quote=F, row.names = F)
+  d.corr <- d
+  idf <- which(d$country=="France" & d$type=="deaths" & d$day>=71 )
+  nf.d <- c(4032,471,588,441,357, 628, 607, 541)
+  d.corr[idf,]$value <- cumsum(nf.d)
+  
+  idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=74)
+  d.corr[idf,]$value <- d[idf,]$value - 21555
+  idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=76)
+  nf.d <- c(76455,3777, 3881)
+  d.corr[idf,]$value <- cumsum(nf.d)
+
+  if (!is.null(file.out))
+    write.csv(d.corr, file=file.out, quote=F, row.names = F)
+  return(d.corr)
 }
