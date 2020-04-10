@@ -1,7 +1,7 @@
 Package: covidix
 Type: Package
 Title: Statistical analysis of the COVID-19 data.
-Version: 1.1.0
+Version: 1.1.1
 Author: Marc Lavielle
 Maintainer: Marc Lavielle <Marc.Lavielle@inria.fr>
 Description: Statistical analysis of the COVID-19 data provided by Johns-Hopkins University
