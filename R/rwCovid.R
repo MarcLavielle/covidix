@@ -69,14 +69,24 @@ rwCovid <- function(file.out=NULL) {
   
   d.corr <- d
   idf <- which(d$country=="France" & d$type=="deaths" & d$day>=71 )
-  nf.d <- c(4032,471,588,441,357, 628, 607, 541)
-  d.corr[idf,]$value <- cumsum(nf.d)
+  nf <- diff(c(0,d[idf,]$value))
+  nf.corr <- nf*0.7
+  nf.corr.d <- c(nf[1], 471, 588, 441, 357, 595, 607, 541, 412)
+  nf.corr[1:length(nf.corr.d)] <- nf.corr.d
+  d.corr[idf,]$value <- cumsum(nf.corr)
   
-  idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=74)
-  d.corr[idf,]$value <- d[idf,]$value - 21555
-  idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=76)
-  nf.d <- c(76455,3777, 3881)
-  d.corr[idf,]$value <- cumsum(nf.d)
+  idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=73)
+  nf <- diff(c(0,d[idf,]$value))
+  nf.corr <- nf*0.75
+  nf.corr.d <- c(nf[1],  4060,  2886,  3116,  3777,  3881,  4286)
+  nf.corr[1:length(nf.corr.d)] <- nf.corr.d
+  d.corr[idf,]$value <- cumsum(nf.corr)
+  
+  #   idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=74)
+  # d.corr[idf,]$value <- d[idf,]$value - 21555
+  # idf <- which(d$country=="France" & d$type=="confirmed" & d$day>=76)
+  # nf.d <- c(76455,3777, 3881, 2231)
+  # d.corr[idf,]$value <- cumsum(nf.d)
 
   if (!is.null(file.out))
     write.csv(d.corr, file=file.out, quote=F, row.names = F)
