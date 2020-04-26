@@ -68,7 +68,15 @@ plotCovid <- function(data=d, type=c("confirmed", "deaths"), nc.min=200, nd.min=
       theme(axis.text.x = element_text(angle = 45, hjust = 0.7, size=7)) +
       facet_wrap(~ country, scales="free")  + ylab("Total number of deaths")
   }
-
+  if ("recovered" %in% type) {
+    j <- j+1
+    pl[[j]] <- ggplot(data=subset(d, type=="deaths"), aes(day, value)) +
+      geom_point(size=point.size, color="red") + geom_line(size=line.size, color="blue") +
+      scale_x_continuous(breaks = br, label= lb ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 0.7, size=7)) +
+      facet_wrap(~ country, scales="free")  + ylab("Total number of deaths")
+  }
+  
   j <- j+1
   pl[[j]] <- ggplot(data=d.min, aes(day.x-day.y, value.x, color=country, shape=country)) +
     geom_line(size=line.size)  +  geom_point(size=point.size) +

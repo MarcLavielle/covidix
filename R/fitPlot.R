@@ -1,13 +1,19 @@
-fitPlot <- function(country="France", file=NULL, nb.day=2, plot.tau=F, plot.pred=F, plot.pred0=T,
-                    plot.day=T, log.scale=F, level=0.9, pred.int=T, conf.int=F) {
+fitPlot <- function(country="France", file=NULL, file.test=NULL, nb.day=2, plot.tau=F, plot.pred=T, plot.pred0=T,
+                    plot.day=T, log.scale=F, level=0.9, pred.int=F, conf.int=F) {
   if (is.null(file))
     file <- gsub(" ","",paste0("data/",country,".RData"))
   
-  load(file)
+  
+  # if (!is.null(file.train))
+  #   load(file.train)
+  # else   
+    load(file)
   
   R0 <- subset(R0, day<=max(d$day)+nb.day)
-  pl1 <- ggplot(R0, aes(date, r0)) + geom_line(color="red", size=1) + 
-    xlab("date") + ylab("Reff")
+  pl1 <- ggplot(R0)  + 
+    xlab("date") + geom_hline(aes(yintercept=1), colour="blue", linetype="dashed") + 
+    geom_line(aes(date, r0), color="red", size=1) +
+    scale_y_continuous(name="Reff", breaks=c(1))
   
   M.est <- length(tau.est)-1
   if (plot.day) {
@@ -38,11 +44,19 @@ fitPlot <- function(country="France", file=NULL, nb.day=2, plot.tau=F, plot.pred
     
     if (plot.pred0) {
       if (plot.pred)
-        pl2 <- pl2 + geom_line(data=Dmc, aes(date,pred), color="#339900", size=0.75)  
+        pl2 <- pl2 + geom_line(data=Dmc, aes(date,pred, color="#339900"), size=0.75)  
       else
-        pl2 <- pl2 + geom_line(data=Dmc, aes(date,pred0), color="#339900", size=0.75)  
+        pl2 <- pl2 + geom_line(data=Dmc, aes(date,pred0, color="#339900"), size=0.75)  
     }
-    pl2 <- pl2+ geom_point( aes(date, value), color="#993399", size=2) 
+    if (plot.pred0)
+      pl2 <- pl2 + geom_point( aes(date, value, color="#993399"), size=2) +
+      scale_colour_manual(values = c( "#339900", "#993399"),
+                          labels= c("prediction", "data"),
+                          guide = guide_legend(override.aes = list(linetype = c( "solid", "blank"), shape = c(NA, 16)))) +
+      theme(legend.title = element_blank(), legend.position=c(0.1, 0.9))
+    else
+      pl2 <- pl2 + geom_point( aes(date, value), color="#993399", size=2) 
+    
   } else {
     Dmo <- subset(d, variable=="y")
     Dmc <- subset(dc, variable=="y" & day<=max(d$day)+nb.day)
@@ -70,6 +84,18 @@ fitPlot <- function(country="France", file=NULL, nb.day=2, plot.tau=F, plot.pred
   }
   if (log.scale)
     pl2 <- pl2 + scale_y_log10()
+  
+  if (!is.null(file.test)) {
+    day.max <- max(d$day)
+    load(file.test)
+    if (plot.day) 
+      pl2 <- pl2 + geom_point(data=subset(d, variable=='dy' & day>day.max), aes(date, value), color="red", size=3) 
+    else
+      pl2 <- pl2 + geom_point(data=subset(d, variable=='y' & day>day.max), aes(date, value), color="red", size=3) 
+    
+  }
+  
+  
   
   return(list(pl.R0=pl1, pl.fit=pl2))
 }
