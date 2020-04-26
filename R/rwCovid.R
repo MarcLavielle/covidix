@@ -1,4 +1,4 @@
-rwCovid <- function(file.out=NULL) {
+rwCovid <- function(file.out=NULL, file.correction=NULL) {
   
   #us=read.csv(url("https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"))
   
@@ -18,7 +18,7 @@ rwCovid <- function(file.out=NULL) {
   #               destfile = "Deaths.csv")
   
   type.in <- c("confirmed", "deaths")
-#  type.in <- c("confirmed", "deaths", "recovered")
+  #  type.in <- c("confirmed", "deaths", "recovered")
   #  type.in <- type
   d <- NULL
   
@@ -78,13 +78,14 @@ rwCovid <- function(file.out=NULL) {
   d.corr[idg,]$value <- 2871
   
   
-  correction <- read.csv(file="correction.csv")
-  for (j in (1:nrow(correction))) {
-    cj <-correction[j,]
-    ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="deaths")
-    d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$deaths
-    ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="confirmed")
-    d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$confirmed
+  if (!is.null(file.correction)) {
+    for (j in (1:nrow(correction))) {
+      cj <-correction[j,]
+      ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="deaths")
+      d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$deaths
+      ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="confirmed")
+      d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$confirmed
+    }
   }
   
   # idf <- which(d$country=="France" & d$type=="deaths" & d$day>=71 )
