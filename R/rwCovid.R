@@ -1,4 +1,4 @@
-rwCovid <- function(file.out=NULL, file.correction=NULL) {
+rwCovid <- function(file.out=NULL, data.correction=NULL) {
   
   url.confirmed <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
   
@@ -66,10 +66,9 @@ rwCovid <- function(file.out=NULL, file.correction=NULL) {
   d.corr[idg,]$value <- 2871
   
   
-  if (!is.null(file.correction)) {
-    correction <- read.csv(file.correction)
-    for (j in (1:nrow(correction))) {
-      cj <-correction[j,]
+  if (!is.null(data.correction)) {
+    for (j in (1:nrow(data.correction))) {
+      cj <-data.correction[j,]
       ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="deaths")
       d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$deaths
       ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="confirmed")
