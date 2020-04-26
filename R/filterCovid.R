@@ -1,5 +1,5 @@
-filterCovid <- function(type=c("confirmed", "deaths","recovered"), country=NULL,
-                        file.in="covid19.csv", file.out=NULL, data=NULL,
+filterCovid <- function(type=c("confirmed", "deaths"), country=NULL,
+                        file.in=NULL, file.out=NULL, data=NULL,
                         nc.min=0, nd.min=0, fc.min=0, fd.min=0,
                         day.max=Inf, day.min=0) {
   

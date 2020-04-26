@@ -72,7 +72,10 @@ mlxoptim2 <- function(model=NULL, output=NULL, data=NULL, initial=NULL, ilog=NUL
 #----------------------------------------------------------------------------------------------
 
 fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T, M=NULL,
-                     M.max=3, d.tau=6, l.tau=6, cw=c(1,1,1,1), dir=".", K1=10, ndt=5) {
+                     M.max=3, d.tau=6, l.tau=6, cw=c(1,1,1,1), dir=".", K1=5, ndt=5) {
+  
+  if (is.null(country))
+    country <- as.character(data$country[1])
   
   file.out <- gsub(" ","",paste0(dir,"/",country,".RData"))
   if (!estim.tau) {
