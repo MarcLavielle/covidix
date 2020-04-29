@@ -5,7 +5,7 @@ rwCovid <- function(file.out=NULL, data.correction=NULL) {
   url.deaths <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
   
   url.recovered <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv"
-
+  
   type.in <- c("confirmed", "deaths")
   #  type.in <- c("confirmed", "deaths", "recovered")
   d <- NULL
@@ -67,13 +67,25 @@ rwCovid <- function(file.out=NULL, data.correction=NULL) {
   
   
   if (!is.null(data.correction)) {
-    for (j in (1:nrow(data.correction))) {
-      cj <-data.correction[j,]
-      ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="deaths")
-      d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$deaths
-      ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="confirmed")
-      d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$confirmed
+    data.correction$date <- as.Date(data.correction$date)
+    for (ctr in levels(data.correction$country)) {
+      dc <- subset(data.correction, country==ctr)
+      for (tp in c("confirmed", "deaths")) {
+        id <- which(d.corr$country==ctr & d.corr$type==tp)
+        df <- d.corr[id,]
+        ifc <- match(dc$date,df$date)
+        dfv <- c(df$value[1], diff(df$value))
+        dfv[ifc] <- dc[[tp]]
+        d.corr[id,]$value <- cumsum(dfv)
+      }
     }
+    # for (j in (1:nrow(data.correction))) {
+    #   cj <-data.correction[j,]
+    #   ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="deaths")
+    #   d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$deaths
+    #   ij <- which(d.corr$country==as.character(cj$country) & d.corr$day==cj$day & d.corr$type=="confirmed")
+    #   d.corr[ij,]$value <- d.corr[ij-1,]$value + cj$confirmed
+    # }
   }
   
   if (!is.null(file.out))

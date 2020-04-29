@@ -102,7 +102,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   period <- 7
   omega <- 2*pi/period
   # ilog <- c(1, 3, 4, 5, 6, 7, 8, 9)
-  cw.ini <- c(1,0.5,0.1,0.1)
+ # cw.ini <- c(1,0.5,0.1,0.1)
+  cw.ini <- cw
   out.name <- c("W", "D")
   ilog <- 1:6
   delta <- 2
@@ -361,7 +362,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
         TauM <- rbind(TauM, tauA, tauB)
       }
       DIMM <- apply(PM, MARGIN=1, function(x) {sum(x !=0)}) +  apply(TauM, MARGIN=1, function(x) {sum(x !=0)})
-      BICM <- DEVM + coef.bic*DIMM + + coef.bic*2*(PM[,'AW'] !=0)
+      BICM <- DEVM + coef.bic*DIMM + coef.bic*2*(PM[,'AW'] !=0)
       i.model <- which.min(BICM)
       p.est <- PM[i.model,]
       tau.est <- TauM[i.model,]
@@ -412,22 +413,22 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   tau.est <- Tau[i.model,]
   M.est <- sum(tau.est>0) - 1
   eval(parse(text=paste0("model <- sir",M.est)))
-  res <- simulx(model=model,
-                parameter=c(args1, p.est, tau.est[2:M.est]),
-                output=out,
-                settings=list(load.design=TRUE))
+  # res <- simulx(model=model,
+  #               parameter=c(args1, p.est, tau.est[2:M.est]),
+  #               output=out,
+  #               settings=list(load.design=TRUE))
   
   delta.t <- 1/ndt
   tc <- seq(min(d1$day), max(d2$day) + nb.day, delta.t)
   outc <- list(name=c("W", "D", "ks"), time=tc)
   
-  res <- simulx(model=model,
+  resc <- simulx(model=model,
                 parameter=c(args1, p.est, tau.est[2:M.est]),
                 output=outc)
-  r.eff <- res[["ks"]][,2]/(p.est['kr']+p.est['kd'])
+  r.eff <- resc[["ks"]][,2]/(p.est['kr']+p.est['kd'])
   t.min <- min(d0$day) - 1
-  dc1 <- data.frame(day=res[["W"]][,1]+t.min, pred0=res[["W"]][,2], variable="y", type="confirmed")
-  dc2 <- data.frame(day=res[["D"]][,1]+t.min, pred0=res[["D"]][,2], variable="y", type="deaths")
+  dc1 <- data.frame(day=resc[["W"]][,1]+t.min, pred0=resc[["W"]][,2], variable="y", type="confirmed")
+  dc2 <- data.frame(day=resc[["D"]][,1]+t.min, pred0=resc[["D"]][,2], variable="y", type="deaths")
   dW0 <- dc1$pred0[(ndt+1):nrow(dc1)] - dc1$pred0[1:(nrow(dc1)-ndt)]
   dD0 <- dc2$pred0[(ndt+1):nrow(dc2)] - dc2$pred0[1:(nrow(dc2)-ndt)]
   # dW <- dc1$pred[(ndt+1):nrow(dc1)] - dc1$pred[1:(nrow(dc1)-ndt)]
