@@ -50,9 +50,19 @@ mlxoptim2 <- function(model=NULL, output=NULL, data=NULL, initial=NULL, ilog=NUL
   }
   sse.ini <- errpred2(l0,args,y.obs,dd,ilog=ilog,cw=cw)
   if (optim){ 
-    r <- optim(l0, errpred2, y=y.obs, args=args, dataIn=dd, ilog=ilog, cw=cw) #, control=list(trace=1))
+    r <- tryCatch( {
+      optim(l0, errpred2, y=y.obs, args=args, dataIn=dd, ilog=ilog, cw=cw) #, control=list(trace=1))
+    },
+    error=function(cond) {
+      return(list(value=Inf, par=NULL))
+    })
     pest=r$par
-    pest[ilog]=exp(pest[ilog])
+    if (!is.null(pest))
+      pest[ilog]=exp(pest[ilog])
+    # sse.est <- r$value
+    # r <- optim(l0, errpred2, y=y.obs, args=args, dataIn=dd, ilog=ilog, cw=cw) #, control=list(trace=1))
+    # pest=r$par
+    # pest[ilog]=exp(pest[ilog])
     if ('AW' %in% names(l0)) {
       pest['AW'] <- exp(pest['AW'])
       pest['AD'] <- exp(pest['AD'])
@@ -72,18 +82,19 @@ mlxoptim2 <- function(model=NULL, output=NULL, data=NULL, initial=NULL, ilog=NUL
 #----------------------------------------------------------------------------------------------
 
 fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T, M=NULL,
-                     M.max=3, d.tau=6, l.tau=6, cw=c(1,1,1,1), dir=".", K1=5, ndt=5) {
+                     M.max=3, d.tau=6, l.tau=6, cw=c(1,1,1,1), dir=".", K1=5, ndt=5, file.out=NULL) {
   
   if (is.null(country))
     country <- as.character(data$country[1])
   
-  file.out <- gsub(" ","",paste0(dir,"/",country,".RData"))
+  if (is.null(file.out))
+    file.out <- gsub(" ","",paste0(dir,"/",country,".RData"))
   if (!estim.tau) {
     if (file.exists(file.out) ) {
       load(file.out)
       #P.ini <- P
       Tau.ini <- Tau[c(1,3,7),] - Tau[1,1] + 0.5
-      estim.p0 <- F
+      #estim.p0 <- F
     } else 
       estim.tau <- T
   }
@@ -102,7 +113,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   period <- 7
   omega <- 2*pi/period
   # ilog <- c(1, 3, 4, 5, 6, 7, 8, 9)
- # cw.ini <- c(1,0.5,0.1,0.1)
+  # cw.ini <- c(1,0.5,0.1,0.1)
   cw.ini <- cw
   out.name <- c("W", "D")
   ilog <- 1:6
@@ -134,6 +145,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   args1 <- c(tmax=day.max, W0=W0, D0=D0, L0=D0/2)
   if (estim.p0) {
     
+    #p.ini0 <- c(k0=2, a1=0.5, kd=0.4, kr=0.2, d=6, I0=W0/2)
     p.ini0 <- c(k0=2, a1=0.01, kd=0.06, kr=0.4, d=2, I0=W0/2)
     # if (file.exists(file.out)) {
     #   load(file=file.out)
@@ -212,8 +224,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   DIM <- apply(P, MARGIN=1, function(x) {sum(x !=0)}) + apply(Tau, MARGIN=1, function(x) {sum(x !=0)})
   BIC <- DEV + coef.bic*DIM + coef.bic*2*(P[,'AW'] !=0)
   print(rbind(DEV, BIC))
-
-    i.model <- which.min(BIC)
+  
+  i.model <- which.min(BIC)
   p.est <- P[i.model,]
   res <- simulx(model=model,
                 parameter=c(p.est),
@@ -276,8 +288,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
       r.min <- r$value
       p.estM <- r$par
       r.c <- r
-#      r.c$par['D0'] <- max(r.c$par.c['D0'] ,1)
-#      r.c$par['L0'] <- max(r.c$par.c['L0'] ,1)
+      #      r.c$par['D0'] <- max(r.c$par.c['D0'] ,1)
+      #      r.c$par['L0'] <- max(r.c$par.c['L0'] ,1)
       
       test <- estim.tau
       #   test <- F
@@ -291,8 +303,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
               tau.c[m] <- taum
               argsM <- c(args1,tau.c[-c(1,M+1)], a0=0, a2=0)
               r.c <- mlxoptim2(model=model, output=out.name, data=d, initial=r.c$par, ilog=ilog, cw=cw, args=argsM)
-#              r.c$par['D0'] <- max(r.c$par.c['D0'] ,1)
-#              r.c$par['L0'] <- max(r.c$par.c['L0'] ,1)
+              #              r.c$par['D0'] <- max(r.c$par.c['D0'] ,1)
+              #              r.c$par['L0'] <- max(r.c$par.c['L0'] ,1)
               if (r.c$value < r.min) {
                 r.min <- r.c$value 
                 p.estM <- r.c$par
@@ -423,8 +435,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   outc <- list(name=c("W", "D", "ks"), time=tc)
   
   resc <- simulx(model=model,
-                parameter=c(args1, p.est, tau.est[2:M.est]),
-                output=outc)
+                 parameter=c(args1, p.est, tau.est[2:M.est]),
+                 output=outc)
   r.eff <- resc[["ks"]][,2]/(p.est['kr']+p.est['kd'])
   t.min <- min(d0$day) - 1
   dc1 <- data.frame(day=resc[["W"]][,1]+t.min, pred0=resc[["W"]][,2], variable="y", type="confirmed")
