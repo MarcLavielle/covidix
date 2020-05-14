@@ -9,16 +9,15 @@ rwCovid <- function(file.out=NULL, data.correction=NULL) {
   type.in <- c("confirmed", "deaths")
   #  type.in <- c("confirmed", "deaths", "recovered")
   d <- NULL
-  
   for (type in type.in) {
     
     # ---- read the data
     if (type=="confirmed")
-      dk <- read.csv(url(url.confirmed))
+      dk <- read.csv(url(url.confirmed), stringsAsFactors=T)
     else if (type=="deaths")
-      dk <- read.csv(url(url.deaths))
+      dk <- read.csv(url(url.deaths), stringsAsFactors=T)
     else
-      dk <- read.csv(url(url.recovered))
+      dk <- read.csv(url(url.recovered), stringsAsFactors=T)
     
     # ---- remove unncessary columns
     dk$Lat <- dk$Long <- NULL
@@ -37,6 +36,7 @@ rwCovid <- function(file.out=NULL, data.correction=NULL) {
     dk[i2,2] <- fi2
     dk[,1]  <- NULL
     names(dk)[1] <- "country"
+    #dk$country <- as.factor(dk$country)
     
     # ---- remove some rows 
     i0 <- unique(c(grep("Princess",dk[,1]), grep(",",dk[,1]), grep("Virgin Islands",dk[,1])))
@@ -46,6 +46,7 @@ rwCovid <- function(file.out=NULL, data.correction=NULL) {
     n.day <- ncol(dk)-1
     n.country <- nrow(dk)
     dk <- melt(dk, id=list("country"), variable.name="date")
+    
     dk$country <- droplevels(dk$country)
     
     # ---- reformat the date and add the day

@@ -13,7 +13,8 @@ fitPlot <- function(country="France", file=NULL, file.test=NULL, nb.day=2, plot.
   pl1 <- ggplot(R0)  + 
     xlab("date") + geom_hline(aes(yintercept=1), colour="blue", linetype="dashed") + 
     geom_line(aes(date, r0), color="red", size=1) +
-    scale_y_continuous(name="Reff", breaks=c(1))
+ #   scale_y_continuous(name="Reff", breaks=c(1))
+  scale_y_continuous(name="Reff")
   
   M.est <- length(tau.est)-1
   if (plot.day) {
@@ -61,7 +62,7 @@ fitPlot <- function(country="France", file=NULL, file.test=NULL, nb.day=2, plot.
     Dmo <- subset(d, variable=="y")
     Dmc <- subset(dc, variable=="y" & day<=max(d$day)+nb.day)
     pl2 <- ggplot(Dmo) + 
-      geom_line(data=Dmc, aes(date,pred0), color="#339900", size=0.75) + 
+      geom_line(data=Dmc, aes(date,pred), color="#339900", size=0.75) + 
       geom_point( aes(date, value), color="#993399", size=2) + 
       xlab("") + ylab("") + expand_limits(y=0) +
       facet_wrap( ~type, scales = "free_y")

@@ -1,11 +1,12 @@
 errpred2 <- function(pp,args,y,dataIn,ilog,cw){
-  pp.sir <- pp[!(names(pp) %in% c('AW', 'AD', 'phi'))]
+  pp.sir <- pp[!(names(pp) %in% c('AW', 'AD', 'phiA', 'phiD'))]
   if (length(pp)>length(pp.sir)) {
     AW <- exp(pp['AW'])
     AD <- exp(pp['AD'])
-    phi <- pp['phi']
+    phiA <- pp['phiA']
+    phiD <- pp['phiD']
   } else {
-    AW = AD = phi = 0
+    AW = AD = phiA = phiD = 0
   }
   omega <- 2*pi/7
   pp.sir[ilog] <- exp(pp.sir[ilog])
@@ -16,11 +17,11 @@ errpred2 <- function(pp,args,y,dataIn,ilog,cw){
     res = simulx(data=dataIn)
     y.pred1=res[[1]][,2]
     t1 <- res[[1]][-1,1]
-    dy.pred1=diff(y.pred1)*(1 + AW*cos(omega*t1 + phi))
+    dy.pred1=diff(y.pred1)*(1 + AW*cos(omega*t1 + phiA))
     y.pred1 <-  cumsum(c(y.pred1[1], dy.pred1))
     y.pred2=res[[2]][,2]
     t2 <- res[[2]][-1,1]
-    dy.pred2=diff(y.pred2)*(1 + AD*cos(omega*t2 + phi))
+    dy.pred2=diff(y.pred2)*(1 + AD*cos(omega*t2 + phiD))
     y.pred2 <- cumsum(c(y.pred2[1], dy.pred2))
     s1=mean((y.pred1-y[[1]])^2)
     s2=mean((y.pred2-y[[2]])^2)
@@ -37,7 +38,7 @@ mlxoptim2 <- function(model=NULL, output=NULL, data=NULL, initial=NULL, ilog=NUL
   y.obs <- list(data[[1]]$value, data[[2]]$value, diff(data[[1]]$value), diff(data[[2]]$value))
   out1 <- list(name=output[1], time=data[[1]]$day)
   out2 <- list(name=output[2], time=data[[2]]$day)
-  ini.sir <- initial[!(names(initial) %in% c('AW', 'AD', 'phi'))]
+  ini.sir <- initial[!(names(initial) %in% c('AW', 'AD', 'phiA', 'phiD'))]
   dd <- simulx(model=model,
                parameter=c(ini.sir, args),
                output=list(out1, out2),
@@ -81,7 +82,7 @@ mlxoptim2 <- function(model=NULL, output=NULL, data=NULL, initial=NULL, ilog=NUL
 #----------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------
 
-fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T, M=NULL,
+fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T, M=NULL, period=NULL,
                      M.max=3, d.tau=6, l.tau=6, cw=c(1,1,1,1), dir=".", K1=5, ndt=5, file.out=NULL) {
   
   if (is.null(country))
@@ -110,8 +111,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   else
     M.est <- NULL
   
-  period <- 7
-  omega <- 2*pi/period
+  omega <- 2*pi/7
   # ilog <- c(1, 3, 4, 5, 6, 7, 8, 9)
   # cw.ini <- c(1,0.5,0.1,0.1)
   cw.ini <- cw
@@ -202,12 +202,12 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   dd1$e <- dd1$e/sd(dd1$e)
   dd2$e <- dd2$value-dd2$pred
   dd2$e <- dd2$e/sd(dd2$e)
-  dd <- rbind(dd1, dd2)
-  omega <- 2*pi/period
-  lmd1 <- lm(e ~ -1 + I(sin(omega*day)) + I(cos(omega*day)), data=dd)
-  phi <- as.vector(-atan(lmd1$coefficients[1]/lmd1$coefficients[2]))
+  lmd1 <- lm(e ~ -1 + I(sin(omega*day)) + I(cos(omega*day)), data=dd1)
+  phiA <- as.vector(-atan(lmd1$coefficients[1]/lmd1$coefficients[2]))
+  lmd2 <- lm(e ~ -1 + I(sin(omega*day)) + I(cos(omega*day)), data=dd2)
+  phiD <- as.vector(-atan(lmd2$coefficients[1]/lmd2$coefficients[2]))
   
-  p.ini.1B <- c(p.est.1A, AW=0.2, AD=0.2, phi=phi)
+  p.ini.1B <- c(p.est.1A, AW=0.2, AD=0.2, phiA=phiA, phiD=phiD)
   rB <- mlxoptim2(model=model, output=out.name, data=d, initial=p.ini.1B, ilog=ilog, cw=cw, args=args1)
   p.est.1B <- rB$par
   #  devB <- mlxoptim2(model=model, output=out.name, data=d, initial=p.est.1B, ilog=ilog, cw=c(0,1,0,1), args=args1, optim=F)$value
@@ -217,7 +217,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   tau1A <- tau1B <- c(tau.ini, rep(0,M.max-1))
   Tau <- rbind(tau1A, tau1B)
   colnames(Tau) <- paste0("tau",0:M.max)
-  pa1 <- c(p.est.1A, AW=0, AD=0, phi=0, a0=0, a2=0, args1)
+  pa1 <- c(p.est.1A, AW=0, AD=0, phiA=0, phiD=0, a0=0, a2=0, args1)
   pb1 <- c(p.est.1B, a0=0, a2=0, args1) 
   P <- rbind(pa1, pb1)
   
@@ -246,8 +246,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   dd[[1]] <- data.frame(day=d[[1]]$day[-1], value=diff(d[[1]]$value), pred=diff(d[[1]]$pred))
   dd[[2]] <- data.frame(day=d[[2]]$day[-1], value=diff(d[[2]]$value), pred=diff(d[[2]]$pred))
   dd[[2]] <- data.frame(day=d[[2]]$day[-1], value=diff(d[[2]]$value), pred=diff(d[[2]]$pred))
-  dd[[1]]$pred <- dd[[1]]$pred*(1 + p.est['AW']*cos(omega*dd[[1]]$day + p.est['phi']))
-  dd[[2]]$pred <- dd[[2]]$pred*(1 + p.est['AD']*cos(omega*dd[[2]]$day + p.est['phi']))
+  dd[[1]]$pred <- dd[[1]]$pred*(1 + p.est['AW']*cos(omega*dd[[1]]$day + p.est['phiA']))
+  dd[[2]]$pred <- dd[[2]]$pred*(1 + p.est['AD']*cos(omega*dd[[2]]$day + p.est['phiD']))
   d[[1]]$pred <- cumsum(c(d[[1]]$pred[1], dd[[1]]$pred))
   d[[2]]$pred <- cumsum(c(d[[2]]$pred[1], dd[[2]]$pred))
   res[['ks']]$Reff <- res[['ks']]$ks/(p.est['kr']+p.est['kd'])
@@ -273,6 +273,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
         }
       } else 
         tau.ini <- Tau.ini[M, 1:(M+1)]
+      tau.ini[M+1] <- t.max + 0.5
       names(tau.ini) <- paste0("tau", 0:M)
       if (M==2) {
         p.ini <- p.est.1A
@@ -325,14 +326,34 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
       #devA <- mlxoptim2(model=model, output=out.name, data=d, initial=p.est.A, ilog=ilog, cw=c(0,1,0,1), args=argsM, optim=F)$value
       devA <- rA$value
       
-      p.ini.B <- c(p.est.A, p.est.1B[c('AW', 'AD', 'phi')])
+      res <- simulx(model=model,
+                    parameter=c(p.est.A, argsM),
+                    output=out,
+                    settings=list(load.design=TRUE))
+      y.pred1=res[[1]][,2]
+      y.pred2=res[[2]][,2]
+      dd1 <- data.frame(day=d[[1]]$day[2:nrow(d[[1]])], value=diff(d[[1]]$value), pred=diff(y.pred1))
+      dd2 <- data.frame(day=d[[2]]$day[2:nrow(d[[2]])], value=diff(d[[2]]$value), pred=diff(y.pred2))
+      dd1$e <- dd1$value-dd1$pred
+      dd1$e <- dd1$e/sd(dd1$e)
+      dd2$e <- dd2$value-dd2$pred
+      dd2$e <- dd2$e/sd(dd2$e)
+      dd <- rbind(dd1, dd2)
+      lmd1 <- lm(e ~ -1 + I(sin(omega*day)) + I(cos(omega*day)), data=dd1)
+      phiA <- as.vector(-atan(lmd1$coefficients[1]/lmd1$coefficients[2]))
+      lmd2 <- lm(e ~ -1 + I(sin(omega*day)) + I(cos(omega*day)), data=dd2)
+      phiD <- as.vector(-atan(lmd2$coefficients[1]/lmd2$coefficients[2]))
+      
+      
+      #p.ini.B <- c(p.est.A, p.est.1B[c('AW', 'AD', 'phi')])
+      p.ini.B <- c(p.est.A, AW=0.2, AD=0.2, phiA=phiA, phiD=phiD)
       rB <- mlxoptim2(model=model, output=out.name, data=d, initial=p.ini.B, ilog=ilog, cw=cw, args=argsM)
       p.est.B <- rB$par
       #devB <- mlxoptim2(model=model, output=out.name, data=d, initial=p.est.B, ilog=ilog, cw=c(0,1,0,1), args=argsM, optim=F)$value
       devB <- rB$value
       
       DEVM <- c(devA, devB)
-      pA <- c(p.est.A, AW=0, AD=0, phi=0, a0=0, a2=0, args1)
+      pA <- c(p.est.A, AW=0, AD=0, phiA=0, phiD=0, a0=0, a2=0, args1)
       pB <- c(p.est.B, a0=0, a2=0, args1) 
       PM <- rbind(pA, pB)
       tauA <- tauB <- c(tau.est, rep(0,M.max-M))
@@ -362,7 +383,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
         devB <- rB$value
         
         DEVM <- c(DEVM, devA, devB)
-        pA <- c(p.est.Ak, AW=0, AD=0, phi=0, list.arg[[k]], args1)
+        pA <- c(p.est.Ak, AW=0, AD=0, phiA=0, phiD=0, list.arg[[k]], args1)
         pB <- c(p.est.Bk, a0=0, list.arg[[k]], args1) 
         iA=match(colnames(P),names(pA))
         iB=match(colnames(P),names(pB))
@@ -388,8 +409,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
       dd <- list()
       dd[[1]] <- data.frame(day=d[[1]]$day[-1], value=diff(d[[1]]$value), pred=diff(d[[1]]$pred))
       dd[[2]] <- data.frame(day=d[[2]]$day[-1], value=diff(d[[2]]$value), pred=diff(d[[2]]$pred))
-      dd[[1]]$pred <- dd[[1]]$pred*(1 + p.est['AW']*cos(omega*dd[[1]]$day + p.est['phi']))
-      dd[[2]]$pred <- dd[[2]]$pred*(1 + p.est['AD']*cos(omega*dd[[2]]$day + p.est['phi']))
+      dd[[1]]$pred <- dd[[1]]$pred*(1 + p.est['AW']*cos(omega*dd[[1]]$day + p.est['phiA']))
+      dd[[2]]$pred <- dd[[2]]$pred*(1 + p.est['AD']*cos(omega*dd[[2]]$day + p.est['phiD']))
       d[[1]]$pred <- cumsum(c(d[[1]]$pred[1], dd[[1]]$pred))
       d[[2]]$pred <- cumsum(c(d[[2]]$pred[1], dd[[2]]$pred))
       res[['ks']]$Reff <- res[['ks']]$ks/(p.est['kr']+p.est['kd'])
@@ -412,15 +433,19 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
     }
   }
   
+  BICM <- BIC
   if (!is.null(M.est)) {
     M <- apply(Tau, MARGIN=1, function(x) {sum(x !=0)})
     jM <- which(M!=(M.est+1))
-    BICM <- BIC
     BICM[jM] = Inf
-    i.model <- which.min(BICM)
-  } else {
-    i.model <- which.min(BIC)
   }
+  if (!is.null(period)) {
+    if (period)
+      BICM[seq(1,length(BICM),by=2)] <- Inf
+    else
+      BICM[seq(2,length(BICM),by=2)] <- Inf
+  }
+  i.model <- which.min(BICM)
   p.est <- P[i.model,]
   tau.est <- Tau[i.model,]
   M.est <- sum(tau.est>0) - 1
@@ -435,7 +460,7 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   outc <- list(name=c("W", "D", "ks"), time=tc)
   
   resc <- simulx(model=model,
-                 parameter=c(args1, p.est, tau.est[2:M.est]),
+                 parameter=c(p.est, tau.est[2:M.est]),
                  output=outc)
   r.eff <- resc[["ks"]][,2]/(p.est['kr']+p.est['kd'])
   t.min <- min(d0$day) - 1
@@ -447,8 +472,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   # dD <- dc2$pred[(ndt+1):nrow(dc2)] - dc2$pred[1:(nrow(dc2)-ndt)]
   dc3 <- data.frame(day=dc1$day[(ndt+1):nrow(dc1)], pred0=dW0, variable="dy", type="confirmed")
   dc4 <- data.frame(day=dc2$day[(ndt+1):nrow(dc2)], pred0=dD0, variable="dy", type="deaths")
-  dc3$pred <- dc3$pred0*(1 + p.est['AW']*cos(omega*(tc[1:nrow(dc3)]+1) + p.est['phi']))
-  dc4$pred <- dc4$pred0*(1 + p.est['AD']*cos(omega*(tc[1:nrow(dc3)]+1) + p.est['phi']))
+  dc3$pred <- dc3$pred0*(1 + p.est['AW']*cos(omega*(tc[1:nrow(dc3)]+1) + p.est['phiA']))
+  dc4$pred <- dc4$pred0*(1 + p.est['AD']*cos(omega*(tc[1:nrow(dc3)]+1) + p.est['phiD']))
   dc1$pred <- dc2$pred <- 0
   for (j in (1:ndt)) {
     dc1$pred[seq(j, nrow(dc1), by=ndt)] <- cumsum(c(dc1$pred[j], dc3$pred[seq(j, nrow(dc3), by=ndt)]))
@@ -467,8 +492,8 @@ fitCovid <- function(data=NULL, country=NULL, nb.day=14, estim.tau=T, estim.p0=T
   d2$pred0 <- res[["D"]][,2]
   dd1 <- data.frame(day=d1$day[2:nrow(d1)], value=diff(d1$value), pred0=diff(d1$pred0), variable="dy", type="confirmed")
   dd2 <- data.frame(day=d2$day[2:nrow(d2)], value=diff(d2$value), pred0=diff(d2$pred0), variable="dy", type="deaths")
-  dd1$pred <- dd1$pred0*(1 + p.est['AW']*cos(omega*((1:nrow(dd1))+1)+ p.est['phi']))
-  dd2$pred <- dd2$pred0*(1 + p.est['AD']*cos(omega*((1:nrow(dd2))+1) + p.est['phi']))
+  dd1$pred <- dd1$pred0*(1 + p.est['AW']*cos(omega*((1:nrow(dd1))+1)+ p.est['phiA']))
+  dd2$pred <- dd2$pred0*(1 + p.est['AD']*cos(omega*((1:nrow(dd2))+1) + p.est['phiD']))
   d1$pred <- cumsum(c(d1$pred0[1], dd1$pred))
   d2$pred <- cumsum(c(d2$pred0[1], dd2$pred))
   d <- rbind(d1, d2)
